@@ -15,6 +15,94 @@ private let kPresets: [(label: String, w: Double, h: Double)] = [
     ("3:2",  3, 2),
 ]
 
+// MARK: - HUD Data Model
+
+struct HUDZone {
+    let label: String
+    let color: NSColor
+    // Normalized coordinates, top-left origin (0 = top/left edge, 1 = bottom/right edge)
+    let normX: CGFloat
+    let normY: CGFloat
+    let normW: CGFloat
+    let normH: CGFloat
+}
+
+enum Platform: String, CaseIterable {
+    case tiktok    = "TikTok"
+    case igReels   = "IG Reels"
+    case igStories = "IG Stories"
+    case ytShorts  = "YT Shorts"
+    case ytLong    = "YT Long"
+    case fbReels   = "FB Reels"
+
+    var zones: [HUDZone] {
+        let W: CGFloat = 1080, H: CGFloat = 1920
+        let topClr    = NSColor.systemOrange.withAlphaComponent(0.50)
+        let bottomClr = NSColor.systemPurple.withAlphaComponent(0.50)
+        let sideClr   = NSColor.systemBlue.withAlphaComponent(0.50)
+
+        switch self {
+        case .tiktok:
+            return [
+                HUDZone(label: "Top Bar",         color: topClr,    normX: 0,       normY: 0,       normW: 1,      normH: 160/H),
+                HUDZone(label: "Caption + Audio", color: bottomClr, normX: 0,       normY: 1-480/H, normW: 1,      normH: 480/H),
+                HUDZone(label: "Action Bar",      color: sideClr,   normX: 1-120/W, normY: 700/H,   normW: 120/W,  normH: 860/H),
+            ]
+        case .igReels:
+            return [
+                HUDZone(label: "Top Bar",         color: topClr,    normX: 0,       normY: 0,       normW: 1,      normH: 250/H),
+                HUDZone(label: "Caption + Audio", color: bottomClr, normX: 0,       normY: 1-450/H, normW: 1,      normH: 450/H),
+                HUDZone(label: "Action Bar",      color: sideClr,   normX: 1-120/W, normY: 1100/H,  normW: 120/W,  normH: 480/H),
+            ]
+        case .igStories:
+            return [
+                HUDZone(label: "Progress + Name", color: topClr,    normX: 0, normY: 0,       normW: 1, normH: 155/H),
+                HUDZone(label: "Reply Bar",       color: bottomClr, normX: 0, normY: 1-280/H, normW: 1, normH: 280/H),
+            ]
+        case .ytShorts:
+            return [
+                HUDZone(label: "Top Bar",         color: topClr,    normX: 0,       normY: 0,       normW: 1,      normH: 180/H),
+                HUDZone(label: "Title + Channel", color: bottomClr, normX: 0,       normY: 1-350/H, normW: 1,      normH: 350/H),
+                HUDZone(label: "Action Bar",      color: sideClr,   normX: 1-120/W, normY: 400/H,   normW: 120/W,  normH: 1200/H),
+            ]
+        case .ytLong:
+            // Controls appear on hover; the video itself is the full safe area
+            return [
+                HUDZone(label: "Player Controls", color: bottomClr, normX: 0, normY: 0.90, normW: 1, normH: 0.10),
+            ]
+        case .fbReels:
+            return [
+                HUDZone(label: "Top Bar",         color: topClr,    normX: 0,       normY: 0,       normW: 1,      normH: 250/H),
+                HUDZone(label: "Caption + Share", color: bottomClr, normX: 0,       normY: 1-420/H, normW: 1,      normH: 420/H),
+                HUDZone(label: "Action Bar",      color: sideClr,   normX: 1-120/W, normY: 400/H,   normW: 120/W,  normH: 1200/H),
+            ]
+        }
+    }
+
+    var aspectRatio: (w: Double, h: Double) {
+        switch self {
+        case .ytLong: return (16, 9)
+        default:      return (9, 16)
+        }
+    }
+
+    // Derives the safe zone from the platform zones (normalized, top-left origin)
+    var safeRect: CGRect {
+        var top: CGFloat = 0, bottom: CGFloat = 1, left: CGFloat = 0, right: CGFloat = 1
+        for z in zones {
+            if z.normW > 0.5 {                          // horizontal band
+                if z.normY < 0.5 { top    = max(top,    z.normY + z.normH) }
+                else              { bottom = min(bottom, z.normY)           }
+            } else if z.normX > 0.5 {                   // right-side bar
+                right = min(right, z.normX)
+            } else if z.normX < 0.1 && z.normW < 0.3 { // left-side bar
+                left = max(left, z.normX + z.normW)
+            }
+        }
+        return CGRect(x: left, y: top, width: right - left, height: bottom - top)
+    }
+}
+
 // MARK: - App Delegate
 
 class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
@@ -24,7 +112,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
 
-        // Main menu (for keyboard shortcuts when app is active)
         let menu = NSMenu()
         let appItem = NSMenuItem()
         menu.addItem(appItem)
@@ -35,7 +122,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         appMenu.addItem(withTitle: "Quit Framer", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         NSApp.mainMenu = menu
 
-        // Status bar item
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let btn = statusItem.button {
             btn.image = NSImage(systemSymbolName: "rectangle.dashed", accessibilityDescription: "Framer")
@@ -54,18 +140,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    @objc func toggleOverlay() {
-        controlPanel.toggle()
-    }
+    @objc func toggleOverlay() { controlPanel.toggle() }
 
     @objc func showPanel() {
         controlPanel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    func windowWillClose(_ notification: Notification) {
-        NSApp.terminate(nil)
-    }
+    func windowWillClose(_ notification: Notification) { NSApp.terminate(nil) }
 }
 
 // MARK: - Control Panel
@@ -76,10 +158,12 @@ class ControlPanel: NSPanel {
     private var toggleButton: NSButton!
     private var sizeLabel: NSTextField!
     private var overlay: OverlayPanel?
+    private var platformButtons: [NSButton] = []
+    private var selectedPlatform: Platform?
 
     init() {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 240, height: 152),
+            contentRect: NSRect(x: 0, y: 0, width: 240, height: 248),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -98,23 +182,23 @@ class ControlPanel: NSPanel {
 
         let label = NSTextField(labelWithString: "Aspect ratio  W : H")
         label.font = .systemFont(ofSize: 11)
-        label.frame = NSRect(x: 16, y: 124, width: 200, height: 16)
+        label.frame = NSRect(x: 16, y: 220, width: 200, height: 16)
         cv.addSubview(label)
 
-        widthField = makeField(value: "9", x: 16, y: 96)
+        widthField = makeField(value: "9", x: 16, y: 192)
         cv.addSubview(widthField)
 
         let colon = NSTextField(labelWithString: ":")
-        colon.frame = NSRect(x: 82, y: 96, width: 16, height: 24)
+        colon.frame = NSRect(x: 82, y: 192, width: 16, height: 24)
         colon.alignment = .center
         colon.font = .systemFont(ofSize: 16, weight: .light)
         cv.addSubview(colon)
 
-        heightField = makeField(value: "16", x: 100, y: 96)
+        heightField = makeField(value: "16", x: 100, y: 192)
         cv.addSubview(heightField)
 
         sizeLabel = NSTextField(labelWithString: "")
-        sizeLabel.frame = NSRect(x: 164, y: 100, width: 62, height: 16)
+        sizeLabel.frame = NSRect(x: 164, y: 196, width: 62, height: 16)
         sizeLabel.alignment = .right
         sizeLabel.font = .monospacedDigitSystemFont(ofSize: 10, weight: .regular)
         sizeLabel.textColor = .secondaryLabelColor
@@ -123,7 +207,7 @@ class ControlPanel: NSPanel {
         // Preset ratio buttons
         let btnW: CGFloat = 38, gap: CGFloat = 4
         for (i, preset) in kPresets.enumerated() {
-            let btn = NSButton(frame: NSRect(x: 16 + CGFloat(i) * (btnW + gap), y: 62, width: btnW, height: 26))
+            let btn = NSButton(frame: NSRect(x: 16 + CGFloat(i) * (btnW + gap), y: 158, width: btnW, height: 26))
             btn.title = preset.label
             btn.bezelStyle = .recessed
             btn.font = .systemFont(ofSize: 10)
@@ -133,12 +217,49 @@ class ControlPanel: NSPanel {
             cv.addSubview(btn)
         }
 
-        toggleButton = NSButton(frame: NSRect(x: 16, y: 16, width: 208, height: 34))
+        toggleButton = NSButton(frame: NSRect(x: 16, y: 112, width: 208, height: 34))
         toggleButton.title = "Show Overlay"
         toggleButton.bezelStyle = .rounded
         toggleButton.target = self
         toggleButton.action = #selector(toggle)
         cv.addSubview(toggleButton)
+
+        // Separator between overlay controls and HUD section
+        let sep = NSBox()
+        sep.boxType = .separator
+        sep.frame = NSRect(x: 0, y: 104, width: 240, height: 1)
+        cv.addSubview(sep)
+
+        // Platform HUD section label
+        let hudLabel = NSTextField(labelWithString: "Platform HUD")
+        hudLabel.font = .systemFont(ofSize: 10)
+        hudLabel.textColor = .secondaryLabelColor
+        hudLabel.frame = NSRect(x: 16, y: 87, width: 160, height: 14)
+        cv.addSubview(hudLabel)
+
+        // Platform buttons: 2 rows of 3
+        // Row 0 (top): TikTok, IG Reels, IG Stories  (y = 62)
+        // Row 1 (bottom): YT Shorts, YT Long, FB Reels (y = 34)
+        let pBtnW: CGFloat = 66, pGap: CGFloat = 5
+        for (i, platform) in Platform.allCases.enumerated() {
+            let col = i % 3
+            let row = i / 3
+            let btn = NSButton(frame: NSRect(
+                x: 16 + CGFloat(col) * (pBtnW + pGap),
+                y: 62 - CGFloat(row) * 28,
+                width: pBtnW,
+                height: 22
+            ))
+            btn.title = platform.rawValue
+            btn.bezelStyle = .recessed
+            btn.setButtonType(.toggle)
+            btn.font = .systemFont(ofSize: 9)
+            btn.tag = i
+            btn.target = self
+            btn.action = #selector(platformSelected(_:))
+            cv.addSubview(btn)
+            platformButtons.append(btn)
+        }
     }
 
     private func makeField(value: String, x: CGFloat, y: CGFloat) -> NSTextField {
@@ -187,6 +308,10 @@ class ControlPanel: NSPanel {
             overlay?.onResize = { [weak self] size in
                 self?.sizeLabel.stringValue = "\(Int(size.width)) x \(Int(size.height))"
             }
+            // Apply current platform HUD if one is selected
+            if let p = selectedPlatform {
+                overlay?.overlayView?.applyHUD(zones: p.zones, safeRect: p.safeRect)
+            }
         } else {
             applyCurrentRatio()
         }
@@ -207,7 +332,27 @@ class ControlPanel: NSPanel {
         applyCurrentRatio()
     }
 
-    // Resizes the visible overlay to the current ratio, keeping its width.
+    @objc private func platformSelected(_ sender: NSButton) {
+        let platform = Platform.allCases[sender.tag]
+
+        if sender.state == .on {
+            // Selecting: deselect all others
+            selectedPlatform = platform
+            platformButtons.filter { $0 !== sender }.forEach { $0.state = .off }
+            // Override aspect ratio fields
+            let ar = platform.aspectRatio
+            widthField.stringValue = formatValue(ar.w)
+            heightField.stringValue = formatValue(ar.h)
+            saveRatio()
+            applyCurrentRatio()
+            overlay?.overlayView?.applyHUD(zones: platform.zones, safeRect: platform.safeRect)
+        } else {
+            // Deselecting
+            selectedPlatform = nil
+            overlay?.overlayView?.clearHUD()
+        }
+    }
+
     private func applyCurrentRatio() {
         let w = CGFloat(widthField.doubleValue)
         let h = CGFloat(heightField.doubleValue)
@@ -230,11 +375,9 @@ class OverlayPanel: NSPanel {
     var ratio: CGFloat
     var onResize: ((NSSize) -> Void)?
 
-    /// The visible overlay rect (inside the grab padding)
-    var innerFrame: NSRect {
-        frame.insetBy(dx: kGrabPadding, dy: kGrabPadding)
-    }
+    var overlayView: OverlayView? { contentView as? OverlayView }
 
+    var innerFrame: NSRect { frame.insetBy(dx: kGrabPadding, dy: kGrabPadding) }
     var innerSize: NSSize {
         NSSize(width: frame.width - kGrabPadding * 2, height: frame.height - kGrabPadding * 2)
     }
@@ -244,8 +387,6 @@ class OverlayPanel: NSPanel {
         let w: CGFloat = 270
         let h = w / aspectRatio
         let s = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-
-        // Window is larger than visible overlay by kGrabPadding on each side
         let pad = kGrabPadding
         super.init(
             contentRect: NSRect(x: s.midX - w / 2 - pad, y: s.midY - h / 2 - pad,
@@ -289,20 +430,14 @@ class OverlayPanel: NSPanel {
     }
 
     override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
-        // Allow the window to extend off-screen by kGrabPadding so the visible
-        // frame can be placed flush against any screen edge or corner.
         guard let screen = screen ?? NSScreen.main else { return frameRect }
         let vis = screen.visibleFrame
         let pad = kGrabPadding
-        let minX = vis.minX - pad
-        let minY = vis.minY - pad
-        let maxX = vis.maxX + pad
-        let maxY = vis.maxY + pad
         var r = frameRect
-        if r.maxX > maxX { r.origin.x = maxX - r.width }
-        if r.maxY > maxY { r.origin.y = maxY - r.height }
-        if r.minX < minX { r.origin.x = minX }
-        if r.minY < minY { r.origin.y = minY }
+        if r.maxX > vis.maxX + pad { r.origin.x = vis.maxX + pad - r.width }
+        if r.maxY > vis.maxY + pad { r.origin.y = vis.maxY + pad - r.height }
+        if r.minX < vis.minX - pad { r.origin.x = vis.minX - pad }
+        if r.minY < vis.minY - pad { r.origin.y = vis.minY - pad }
         return r
     }
 
@@ -313,30 +448,88 @@ class OverlayPanel: NSPanel {
     }
 }
 
-// MARK: - Overlay View (draws border + handles drag-to-move)
+// MARK: - Overlay View
 
 class OverlayView: NSView {
     private var dragStart = NSPoint.zero
     private var originAtDrag = NSPoint.zero
-    private var isDragging = false
+    private var hudZones: [HUDZone] = []
+    private var safeZoneRect: CGRect? = nil
+
+    func applyHUD(zones: [HUDZone], safeRect: CGRect) {
+        hudZones = zones
+        safeZoneRect = safeRect
+        needsDisplay = true
+    }
+
+    func clearHUD() {
+        hudZones = []
+        safeZoneRect = nil
+        needsDisplay = true
+    }
 
     override func draw(_ dirtyRect: NSRect) {
-        // Draw border inset by grab padding so it appears at the visual edge
-        let borderRect = bounds.insetBy(dx: kGrabPadding, dy: kGrabPadding)
-        let path = NSBezierPath(rect: borderRect.insetBy(dx: kBorderWidth / 2, dy: kBorderWidth / 2))
+        let inner = bounds.insetBy(dx: kGrabPadding, dy: kGrabPadding)
+
+        // Draw HUD zones clipped to inner frame
+        if !hudZones.isEmpty || safeZoneRect != nil {
+            NSGraphicsContext.saveGraphicsState()
+            NSBezierPath(rect: inner).setClip()
+            for zone in hudZones { drawZone(zone, in: inner) }
+            if let safe = safeZoneRect { drawSafeZone(safe, in: inner) }
+            NSGraphicsContext.restoreGraphicsState()
+        }
+
+        // Draw border on top
+        let path = NSBezierPath(rect: inner.insetBy(dx: kBorderWidth / 2, dy: kBorderWidth / 2))
         path.lineWidth = kBorderWidth
         NSColor.systemRed.withAlphaComponent(0.85).setStroke()
         path.stroke()
     }
 
-    // Grab zone: kGrabPadding outside and inside the border. Interior is click-through.
+    private func drawZone(_ zone: HUDZone, in inner: NSRect) {
+        let x = inner.minX + zone.normX * inner.width
+        let w = zone.normW * inner.width
+        let h = zone.normH * inner.height
+        // Convert top-left normalized y to macOS bottom-left screen y
+        let y = inner.minY + (1.0 - zone.normY - zone.normH) * inner.height
+        let rect = NSRect(x: x, y: y, width: w, height: h)
+
+        zone.color.setFill()
+        NSBezierPath(rect: rect).fill()
+
+        guard h >= 16 else { return }
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 9, weight: .semibold),
+            .foregroundColor: NSColor.white.withAlphaComponent(0.92),
+        ]
+        let str = NSAttributedString(string: zone.label, attributes: attrs)
+        let sz = str.size()
+        let lx = x + (w - sz.width) / 2
+        let ly = y + (h - sz.height) / 2
+        str.draw(at: NSPoint(x: max(inner.minX + 3, lx), y: ly))
+    }
+
+    private func drawSafeZone(_ safe: CGRect, in inner: NSRect) {
+        let sx = inner.minX + safe.origin.x * inner.width
+        let sw = safe.size.width * inner.width
+        let sh = safe.size.height * inner.height
+        let sy = inner.minY + (1.0 - safe.origin.y - safe.size.height) * inner.height
+        let rect = NSRect(x: sx, y: sy, width: sw, height: sh)
+
+        let path = NSBezierPath(rect: rect.insetBy(dx: 1, dy: 1))
+        path.lineWidth = 1.5
+        path.setLineDash([6, 4], count: 2, phase: 0)
+        NSColor.systemGreen.withAlphaComponent(0.85).setStroke()
+        path.stroke()
+    }
+
+    // Grab zone: border region only; interior is click-through
     override func hitTest(_ p: NSPoint) -> NSView? {
         guard bounds.contains(p) else { return nil }
         for sub in subviews.reversed() {
             if let hit = sub.hitTest(p) { return hit }
         }
-        // The visible border sits at kGrabPadding inset. Allow grabbing from
-        // the window edge (0) up to kGrabPadding past the border inward.
         let inner = bounds.insetBy(dx: kGrabPadding * 2, dy: kGrabPadding * 2)
         return (inner.width > 0 && inner.height > 0 && inner.contains(p)) ? nil : self
     }
@@ -352,8 +545,8 @@ class OverlayView: NSView {
     }
 
     override func mouseEntered(with event: NSEvent) { updateCursor(for: event) }
-    override func mouseMoved(with event: NSEvent) { updateCursor(for: event) }
-    override func mouseExited(with event: NSEvent) { NSCursor.arrow.set() }
+    override func mouseMoved(with event: NSEvent)   { updateCursor(for: event) }
+    override func mouseExited(with event: NSEvent)  { NSCursor.arrow.set() }
 
     private func updateCursor(for event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
@@ -366,7 +559,6 @@ class OverlayView: NSView {
     }
 
     override func mouseDown(with event: NSEvent) {
-        isDragging = true
         NSCursor.closedHand.set()
         dragStart = NSEvent.mouseLocation
         originAtDrag = window?.frame.origin ?? .zero
@@ -380,10 +572,7 @@ class OverlayView: NSView {
         ))
     }
 
-    override func mouseUp(with event: NSEvent) {
-        isDragging = false
-        updateCursor(for: event)
-    }
+    override func mouseUp(with event: NSEvent) { updateCursor(for: event) }
 }
 
 // MARK: - Resize Handle
@@ -439,9 +628,7 @@ class ResizeHandle: NSView {
         panel.setFrame(newFrame, display: true)
     }
 
-    override func resetCursorRects() {
-        addCursorRect(bounds, cursor: .crosshair)
-    }
+    override func resetCursorRects() { addCursorRect(bounds, cursor: .crosshair) }
 }
 
 // MARK: - Main
