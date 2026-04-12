@@ -310,7 +310,7 @@ class ControlPanel: NSPanel {
             }
             // Apply current platform HUD if one is selected
             if let p = selectedPlatform {
-                overlay?.overlayView?.applyHUD(zones: p.zones, safeRect: p.safeRect)
+                overlay?.overlayView?.applyHUD(zones: p.zones, safeRect: p.safeRect, platform: p)
             }
         } else {
             applyCurrentRatio()
@@ -345,7 +345,7 @@ class ControlPanel: NSPanel {
             heightField.stringValue = formatValue(ar.h)
             saveRatio()
             applyCurrentRatio()
-            overlay?.overlayView?.applyHUD(zones: platform.zones, safeRect: platform.safeRect)
+            overlay?.overlayView?.applyHUD(zones: platform.zones, safeRect: platform.safeRect, platform: platform)
         } else {
             // Deselecting
             selectedPlatform = nil
@@ -384,7 +384,7 @@ class OverlayPanel: NSPanel {
 
     init(aspectRatio: CGFloat) {
         self.ratio = aspectRatio
-        let w: CGFloat = 270
+        let w: CGFloat = 400
         let h = w / aspectRatio
         let s = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         let pad = kGrabPadding
@@ -455,28 +455,29 @@ class OverlayView: NSView {
     private var originAtDrag = NSPoint.zero
     private var hudZones: [HUDZone] = []
     private var safeZoneRect: CGRect? = nil
+    private var currentPlatform: Platform? = nil
 
-    func applyHUD(zones: [HUDZone], safeRect: CGRect) {
+    func applyHUD(zones: [HUDZone], safeRect: CGRect, platform: Platform) {
         hudZones = zones
         safeZoneRect = safeRect
+        currentPlatform = platform
         needsDisplay = true
     }
 
     func clearHUD() {
         hudZones = []
         safeZoneRect = nil
+        currentPlatform = nil
         needsDisplay = true
     }
 
     override func draw(_ dirtyRect: NSRect) {
         let inner = bounds.insetBy(dx: kGrabPadding, dy: kGrabPadding)
 
-        // Draw HUD zones clipped to inner frame
-        if !hudZones.isEmpty || safeZoneRect != nil {
+        if let platform = currentPlatform {
             NSGraphicsContext.saveGraphicsState()
             NSBezierPath(rect: inner).setClip()
-            for zone in hudZones { drawZone(zone, in: inner) }
-            if let safe = safeZoneRect { drawSafeZone(safe, in: inner) }
+            drawPlatformUI(platform, in: inner)
             NSGraphicsContext.restoreGraphicsState()
         }
 
@@ -485,29 +486,6 @@ class OverlayView: NSView {
         path.lineWidth = kBorderWidth
         NSColor.systemRed.withAlphaComponent(0.85).setStroke()
         path.stroke()
-    }
-
-    private func drawZone(_ zone: HUDZone, in inner: NSRect) {
-        let x = inner.minX + zone.normX * inner.width
-        let w = zone.normW * inner.width
-        let h = zone.normH * inner.height
-        // Convert top-left normalized y to macOS bottom-left screen y
-        let y = inner.minY + (1.0 - zone.normY - zone.normH) * inner.height
-        let rect = NSRect(x: x, y: y, width: w, height: h)
-
-        zone.color.setFill()
-        NSBezierPath(rect: rect).fill()
-
-        guard h >= 16 else { return }
-        let attrs: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 9, weight: .semibold),
-            .foregroundColor: NSColor.white.withAlphaComponent(0.92),
-        ]
-        let str = NSAttributedString(string: zone.label, attributes: attrs)
-        let sz = str.size()
-        let lx = x + (w - sz.width) / 2
-        let ly = y + (h - sz.height) / 2
-        str.draw(at: NSPoint(x: max(inner.minX + 3, lx), y: ly))
     }
 
     private func drawSafeZone(_ safe: CGRect, in inner: NSRect) {
@@ -522,6 +500,395 @@ class OverlayView: NSView {
         path.setLineDash([6, 4], count: 2, phase: 0)
         NSColor.systemGreen.withAlphaComponent(0.85).setStroke()
         path.stroke()
+    }
+
+    // MARK: - Coordinate Helpers
+
+    private func refPt(_ x: CGFloat, _ y: CGFloat,
+                       refW: CGFloat = 1080, refH: CGFloat = 1920, in inner: NSRect) -> NSPoint {
+        NSPoint(x: inner.minX + (x / refW) * inner.width,
+                y: inner.maxY - (y / refH) * inner.height)
+    }
+
+    private func scl(_ refW: CGFloat = 1080, in inner: NSRect) -> CGFloat {
+        inner.width / refW
+    }
+
+    // MARK: - Drawing Helpers
+
+    private func drawIcon(_ name: String, at center: NSPoint, size: CGFloat,
+                          color: NSColor = .white) {
+        let config = NSImage.SymbolConfiguration(pointSize: size, weight: .medium)
+        guard let base = NSImage(systemSymbolName: name, accessibilityDescription: nil)?
+            .withSymbolConfiguration(config) else { return }
+        let sz = base.size
+        let tinted = NSImage(size: sz)
+        tinted.lockFocus()
+        base.draw(in: NSRect(origin: .zero, size: sz))
+        color.set()
+        NSRect(origin: .zero, size: sz).fill(using: .sourceAtop)
+        tinted.unlockFocus()
+        tinted.draw(in: NSRect(x: center.x - sz.width / 2, y: center.y - sz.height / 2,
+                               width: sz.width, height: sz.height))
+    }
+
+    private func drawLabel(_ text: String, at pt: NSPoint, size: CGFloat,
+                           weight: NSFont.Weight = .regular, color: NSColor = .white) {
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: size, weight: weight),
+            .foregroundColor: color
+        ]
+        let str = NSAttributedString(string: text, attributes: attrs)
+        str.draw(at: NSPoint(x: pt.x, y: pt.y - str.size().height))
+    }
+
+    private func drawLabelCentered(_ text: String, at center: NSPoint, size: CGFloat,
+                                   weight: NSFont.Weight = .regular, color: NSColor = .white) {
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: size, weight: weight),
+            .foregroundColor: color
+        ]
+        let str = NSAttributedString(string: text, attributes: attrs)
+        let sz = str.size()
+        str.draw(at: NSPoint(x: center.x - sz.width / 2, y: center.y - sz.height / 2))
+    }
+
+    private func drawTopGradient(height: CGFloat, refH: CGFloat = 1920, in inner: NSRect) {
+        let h = (height / refH) * inner.height
+        let rect = NSRect(x: inner.minX, y: inner.maxY - h, width: inner.width, height: h)
+        NSGradient(starting: NSColor.black.withAlphaComponent(0.5),
+                   ending: NSColor.black.withAlphaComponent(0.0))?
+            .draw(in: rect, angle: 270)
+    }
+
+    private func drawBottomGradient(height: CGFloat, refH: CGFloat = 1920, in inner: NSRect) {
+        let h = (height / refH) * inner.height
+        let rect = NSRect(x: inner.minX, y: inner.minY, width: inner.width, height: h)
+        NSGradient(starting: NSColor.black.withAlphaComponent(0.5),
+                   ending: NSColor.black.withAlphaComponent(0.0))?
+            .draw(in: rect, angle: 90)
+    }
+
+    private func drawPill(_ text: String, at pt: NSPoint, scale s: CGFloat,
+                          fill: NSColor = NSColor.white.withAlphaComponent(0.15),
+                          stroke: NSColor = NSColor.white.withAlphaComponent(0.5),
+                          textColor: NSColor = .white) {
+        let font = NSFont.systemFont(ofSize: 13 * s, weight: .semibold)
+        let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: textColor]
+        let str = NSAttributedString(string: text, attributes: attrs)
+        let sz = str.size()
+        let pad: CGFloat = 10 * s
+        let pillH = sz.height + pad
+        let pillRect = NSRect(x: pt.x, y: pt.y - pillH, width: sz.width + pad * 2, height: pillH)
+        let path = NSBezierPath(roundedRect: pillRect, xRadius: pillH / 2, yRadius: pillH / 2)
+        fill.setFill(); path.fill()
+        stroke.setStroke(); path.lineWidth = s; path.stroke()
+        str.draw(at: NSPoint(x: pt.x + pad, y: pt.y - pillH + pad / 2))
+    }
+
+    private func drawCircle(at center: NSPoint, radius: CGFloat,
+                            fill: NSColor? = nil, stroke: NSColor? = nil) {
+        let rect = NSRect(x: center.x - radius, y: center.y - radius,
+                          width: radius * 2, height: radius * 2)
+        let path = NSBezierPath(ovalIn: rect)
+        if let f = fill { f.setFill(); path.fill() }
+        if let s = stroke { s.setStroke(); path.lineWidth = 1; path.stroke() }
+    }
+
+    // MARK: - Platform UI Dispatch
+
+    private func drawPlatformUI(_ platform: Platform, in inner: NSRect) {
+        switch platform {
+        case .igReels:   drawIGReels(in: inner)
+        case .igStories: drawIGStories(in: inner)
+        case .tiktok:    drawTikTok(in: inner)
+        case .ytShorts:  drawYTShorts(in: inner)
+        case .ytLong:    drawYTLong(in: inner)
+        case .fbReels:   drawFBReels(in: inner)
+        }
+    }
+
+    // MARK: - IG Reels
+
+    private func drawIGReels(in inner: NSRect) {
+        let s = scl(in: inner)
+
+        drawTopGradient(height: 250, in: inner)
+        drawBottomGradient(height: 550, in: inner)
+
+        // Top bar
+        drawIcon("chevron.left", at: refPt(50, 55, in: inner), size: 22 * s)
+        drawLabelCentered("Reels", at: refPt(540, 55, in: inner), size: 20 * s, weight: .bold)
+        drawIcon("camera", at: refPt(1030, 55, in: inner), size: 24 * s)
+
+        // Right action bar
+        let ax: CGFloat = 1020
+        drawIcon("heart", at: refPt(ax, 1220, in: inner), size: 28 * s)
+        drawLabelCentered("5000", at: refPt(ax, 1270, in: inner), size: 12 * s, weight: .semibold)
+
+        drawIcon("bubble.right", at: refPt(ax, 1370, in: inner), size: 28 * s)
+        drawLabelCentered("6000", at: refPt(ax, 1420, in: inner), size: 12 * s, weight: .semibold)
+
+        drawIcon("paperplane", at: refPt(ax, 1520, in: inner), size: 28 * s)
+        drawLabelCentered("7000", at: refPt(ax, 1570, in: inner), size: 12 * s, weight: .semibold)
+
+        drawIcon("ellipsis", at: refPt(ax, 1660, in: inner), size: 22 * s)
+
+        // Audio disc
+        drawCircle(at: refPt(ax, 1760, in: inner), radius: 18 * s,
+                   fill: NSColor.gray.withAlphaComponent(0.5), stroke: .white)
+        drawIcon("music.note", at: refPt(ax, 1760, in: inner), size: 12 * s)
+
+        // Bottom info
+        let by: CGFloat = 1700
+        drawCircle(at: refPt(52, by + 15, in: inner), radius: 18 * s,
+                   fill: NSColor.gray.withAlphaComponent(0.6), stroke: .white)
+        drawLabel("your.name", at: refPt(82, by, in: inner), size: 14 * s, weight: .bold)
+        drawIcon("checkmark.seal.fill", at: refPt(215, by + 10, in: inner), size: 14 * s,
+                 color: .systemBlue)
+        drawPill("Follow", at: refPt(245, by - 2, in: inner), scale: s)
+
+        drawLabel("Lorem metus porttitor purus enim. Non et m...",
+                  at: refPt(20, by + 55, in: inner), size: 13 * s,
+                  color: NSColor.white.withAlphaComponent(0.9))
+
+        drawIcon("music.note", at: refPt(30, by + 105, in: inner), size: 11 * s)
+        drawLabel("Lorem metus porttitor pur...", at: refPt(50, by + 95, in: inner),
+                  size: 11 * s, color: NSColor.white.withAlphaComponent(0.85))
+        drawIcon("person.2.fill", at: refPt(550, by + 105, in: inner), size: 11 * s)
+        drawLabel("55 users", at: refPt(575, by + 95, in: inner),
+                  size: 11 * s, color: NSColor.white.withAlphaComponent(0.85))
+    }
+
+    // MARK: - IG Stories
+
+    private func drawIGStories(in inner: NSRect) {
+        let s = scl(in: inner)
+
+        drawTopGradient(height: 180, in: inner)
+        drawBottomGradient(height: 350, in: inner)
+
+        // Progress bars
+        let barY: CGFloat = 18, barH: CGFloat = 3, barPad: CGFloat = 8
+        let numBars = 3
+        let totalPad = barPad * CGFloat(numBars + 1)
+        let barW = (1080 - totalPad) / CGFloat(numBars)
+        for i in 0..<numBars {
+            let bx = barPad + CGFloat(i) * (barW + barPad)
+            let pt = refPt(bx, barY, in: inner)
+            let w = barW * s, h = barH * s
+            let rect = NSRect(x: pt.x, y: pt.y - h, width: w, height: h)
+            let path = NSBezierPath(roundedRect: rect, xRadius: h / 2, yRadius: h / 2)
+            (i == 0 ? NSColor.white : NSColor.white.withAlphaComponent(0.4)).setFill()
+            path.fill()
+        }
+
+        // Profile + name
+        drawCircle(at: refPt(45, 72, in: inner), radius: 20 * s,
+                   fill: NSColor.gray.withAlphaComponent(0.5),
+                   stroke: NSColor.white.withAlphaComponent(0.8))
+        drawLabel("your.name", at: refPt(80, 58, in: inner), size: 14 * s, weight: .semibold)
+        drawLabel("2h", at: refPt(80, 82, in: inner), size: 12 * s,
+                  color: NSColor.white.withAlphaComponent(0.7))
+
+        drawIcon("xmark", at: refPt(1030, 72, in: inner), size: 22 * s)
+        drawIcon("ellipsis", at: refPt(960, 72, in: inner), size: 20 * s)
+
+        // Bottom: Send message bar
+        let msgY: CGFloat = 1800
+        let msgPt = refPt(20, msgY, in: inner)
+        let msgBtm = refPt(20, msgY + 50, in: inner)
+        let msgRect = NSRect(x: msgPt.x, y: msgBtm.y, width: 800 * s, height: 48 * s)
+        let msgPath = NSBezierPath(roundedRect: msgRect, xRadius: 24 * s, yRadius: 24 * s)
+        NSColor.white.withAlphaComponent(0.15).setFill(); msgPath.fill()
+        NSColor.white.withAlphaComponent(0.4).setStroke(); msgPath.lineWidth = s; msgPath.stroke()
+        drawLabel("Send message",
+                  at: NSPoint(x: msgRect.minX + 20 * s, y: msgRect.midY + 7 * s),
+                  size: 14 * s, color: NSColor.white.withAlphaComponent(0.6))
+
+        drawIcon("heart", at: refPt(920, msgY + 25, in: inner), size: 26 * s)
+        drawIcon("paperplane", at: refPt(1010, msgY + 25, in: inner), size: 26 * s)
+    }
+
+    // MARK: - TikTok
+
+    private func drawTikTok(in inner: NSRect) {
+        let s = scl(in: inner)
+
+        drawTopGradient(height: 200, in: inner)
+        drawBottomGradient(height: 550, in: inner)
+
+        // Top tabs
+        drawLabelCentered("Following", at: refPt(380, 60, in: inner), size: 16 * s,
+                         color: NSColor.white.withAlphaComponent(0.6))
+        drawLabelCentered("For You", at: refPt(540, 60, in: inner), size: 17 * s, weight: .bold)
+        let tabPt = refPt(490, 78, in: inner)
+        let tabEnd = NSPoint(x: tabPt.x + 100 * s, y: tabPt.y)
+        let tabLine = NSBezierPath()
+        tabLine.move(to: tabPt); tabLine.line(to: tabEnd)
+        tabLine.lineWidth = 2 * s
+        NSColor.white.setStroke(); tabLine.stroke()
+        drawIcon("magnifyingglass", at: refPt(1020, 60, in: inner), size: 22 * s)
+
+        // Right action bar
+        let ax: CGFloat = 1020
+
+        // Profile circle + follow button
+        drawCircle(at: refPt(ax, 820, in: inner), radius: 24 * s,
+                   fill: NSColor.gray.withAlphaComponent(0.5), stroke: .white)
+        drawCircle(at: refPt(ax, 855, in: inner), radius: 10 * s,
+                   fill: .systemPink)
+        drawIcon("plus", at: refPt(ax, 855, in: inner), size: 8 * s)
+
+        drawIcon("heart.fill", at: refPt(ax, 970, in: inner), size: 32 * s)
+        drawLabelCentered("328.7K", at: refPt(ax, 1020, in: inner), size: 11 * s, weight: .medium)
+
+        drawIcon("ellipsis.bubble.fill", at: refPt(ax, 1110, in: inner), size: 30 * s)
+        drawLabelCentered("2041", at: refPt(ax, 1160, in: inner), size: 11 * s, weight: .medium)
+
+        drawIcon("bookmark.fill", at: refPt(ax, 1250, in: inner), size: 28 * s)
+        drawLabelCentered("4032", at: refPt(ax, 1300, in: inner), size: 11 * s, weight: .medium)
+
+        drawIcon("arrowshape.turn.up.right.fill", at: refPt(ax, 1390, in: inner), size: 28 * s)
+        drawLabelCentered("Share", at: refPt(ax, 1440, in: inner), size: 11 * s, weight: .medium)
+
+        // Audio disc
+        drawCircle(at: refPt(ax, 1560, in: inner), radius: 22 * s,
+                   fill: NSColor.darkGray, stroke: .gray)
+        drawIcon("music.note", at: refPt(ax, 1560, in: inner), size: 13 * s)
+
+        // Bottom info
+        drawLabel("@creator_name", at: refPt(20, 1570, in: inner), size: 15 * s, weight: .bold)
+        drawLabel("Check out this amazing content! #fyp #viral",
+                  at: refPt(20, 1620, in: inner), size: 13 * s,
+                  color: NSColor.white.withAlphaComponent(0.9))
+        drawIcon("music.note", at: refPt(30, 1700, in: inner), size: 12 * s)
+        drawLabel("Original Sound - creator_name", at: refPt(50, 1690, in: inner),
+                  size: 12 * s, color: NSColor.white.withAlphaComponent(0.85))
+    }
+
+    // MARK: - YT Shorts
+
+    private func drawYTShorts(in inner: NSRect) {
+        let s = scl(in: inner)
+
+        drawTopGradient(height: 160, in: inner)
+        drawBottomGradient(height: 450, in: inner)
+
+        // Top bar
+        drawIcon("magnifyingglass", at: refPt(940, 60, in: inner), size: 22 * s)
+        drawIcon("ellipsis", at: refPt(1030, 60, in: inner), size: 22 * s)
+
+        // Right action bar
+        let ax: CGFloat = 1020
+
+        drawIcon("hand.thumbsup", at: refPt(ax, 1050, in: inner), size: 28 * s)
+        drawLabelCentered("45K", at: refPt(ax, 1100, in: inner), size: 11 * s, weight: .medium)
+
+        drawIcon("hand.thumbsdown", at: refPt(ax, 1190, in: inner), size: 28 * s)
+        drawLabelCentered("Dislike", at: refPt(ax, 1240, in: inner), size: 10 * s, weight: .medium)
+
+        drawIcon("text.bubble", at: refPt(ax, 1330, in: inner), size: 26 * s)
+        drawLabelCentered("1.2K", at: refPt(ax, 1380, in: inner), size: 11 * s, weight: .medium)
+
+        drawIcon("arrowshape.turn.up.right", at: refPt(ax, 1470, in: inner), size: 26 * s)
+        drawLabelCentered("Share", at: refPt(ax, 1520, in: inner), size: 10 * s, weight: .medium)
+
+        drawIcon("arrow.2.squarepath", at: refPt(ax, 1600, in: inner), size: 24 * s)
+        drawLabelCentered("Remix", at: refPt(ax, 1650, in: inner), size: 10 * s, weight: .medium)
+
+        // Audio disc
+        drawCircle(at: refPt(ax, 1750, in: inner), radius: 18 * s,
+                   fill: NSColor.darkGray, stroke: .gray)
+        drawIcon("music.note", at: refPt(ax, 1750, in: inner), size: 12 * s)
+
+        // Bottom: channel + subscribe
+        drawCircle(at: refPt(45, 1650, in: inner), radius: 20 * s,
+                   fill: NSColor.gray.withAlphaComponent(0.5), stroke: .white)
+        drawLabel("@channel_name", at: refPt(80, 1638, in: inner), size: 14 * s, weight: .semibold)
+        drawPill("Subscribe", at: refPt(300, 1636, in: inner), scale: s,
+                 fill: .red, stroke: .red)
+
+        drawLabel("Amazing video title goes here #shorts",
+                  at: refPt(20, 1700, in: inner), size: 13 * s,
+                  color: NSColor.white.withAlphaComponent(0.9))
+        drawIcon("music.note", at: refPt(30, 1765, in: inner), size: 12 * s)
+        drawLabel("Original audio", at: refPt(50, 1755, in: inner), size: 12 * s,
+                  color: NSColor.white.withAlphaComponent(0.85))
+    }
+
+    // MARK: - YT Long
+
+    private func drawYTLong(in inner: NSRect) {
+        let refW: CGFloat = 1920, refH: CGFloat = 1080
+        let s = inner.width / refW
+
+        drawBottomGradient(height: 120, refH: refH, in: inner)
+
+        // Progress bar
+        let barPt = refPt(0, 980, refW: refW, refH: refH, in: inner)
+        let barRect = NSRect(x: inner.minX, y: barPt.y, width: inner.width, height: 4 * s)
+        NSColor.white.withAlphaComponent(0.3).setFill()
+        NSBezierPath(rect: barRect).fill()
+        let playedRect = NSRect(x: inner.minX, y: barPt.y, width: inner.width * 0.4, height: 4 * s)
+        NSColor.red.setFill()
+        NSBezierPath(rect: playedRect).fill()
+        drawCircle(at: NSPoint(x: inner.minX + inner.width * 0.4, y: barPt.y + 2 * s),
+                   radius: 7 * s, fill: .red)
+
+        // Controls row
+        let cy: CGFloat = 1035
+        drawIcon("play.fill", at: refPt(60, cy, refW: refW, refH: refH, in: inner), size: 22 * s)
+        drawIcon("forward.end.fill", at: refPt(140, cy, refW: refW, refH: refH, in: inner), size: 18 * s)
+        drawIcon("speaker.wave.2.fill", at: refPt(220, cy, refW: refW, refH: refH, in: inner), size: 18 * s)
+        drawLabel("3:42 / 8:15", at: refPt(300, cy - 12, refW: refW, refH: refH, in: inner),
+                  size: 13 * s, color: NSColor.white.withAlphaComponent(0.9))
+
+        drawIcon("captions.bubble", at: refPt(1660, cy, refW: refW, refH: refH, in: inner), size: 20 * s)
+        drawIcon("gear", at: refPt(1740, cy, refW: refW, refH: refH, in: inner), size: 20 * s)
+        drawIcon("rectangle.on.rectangle", at: refPt(1800, cy, refW: refW, refH: refH, in: inner), size: 18 * s)
+        drawIcon("arrow.up.left.and.arrow.down.right",
+                 at: refPt(1870, cy, refW: refW, refH: refH, in: inner), size: 20 * s)
+    }
+
+    // MARK: - FB Reels
+
+    private func drawFBReels(in inner: NSRect) {
+        let s = scl(in: inner)
+
+        drawTopGradient(height: 250, in: inner)
+        drawBottomGradient(height: 500, in: inner)
+
+        // Top bar
+        drawLabel("Reels", at: refPt(20, 45, in: inner), size: 22 * s, weight: .bold)
+        drawIcon("camera", at: refPt(1030, 60, in: inner), size: 24 * s)
+
+        // Right action bar
+        let ax: CGFloat = 1020
+
+        drawIcon("hand.thumbsup", at: refPt(ax, 1200, in: inner), size: 28 * s)
+        drawLabelCentered("12K", at: refPt(ax, 1250, in: inner), size: 12 * s, weight: .semibold)
+
+        drawIcon("bubble.right", at: refPt(ax, 1350, in: inner), size: 28 * s)
+        drawLabelCentered("847", at: refPt(ax, 1400, in: inner), size: 12 * s, weight: .semibold)
+
+        drawIcon("arrowshape.turn.up.right.fill", at: refPt(ax, 1500, in: inner), size: 28 * s)
+        drawLabelCentered("2.3K", at: refPt(ax, 1550, in: inner), size: 12 * s, weight: .semibold)
+
+        drawIcon("ellipsis", at: refPt(ax, 1640, in: inner), size: 22 * s)
+
+        // Bottom: profile + follow
+        drawCircle(at: refPt(45, 1650, in: inner), radius: 20 * s,
+                   fill: NSColor.gray.withAlphaComponent(0.5), stroke: .white)
+        drawLabel("Page Name", at: refPt(80, 1636, in: inner), size: 14 * s, weight: .bold)
+        drawPill("Follow", at: refPt(250, 1636, in: inner), scale: s)
+
+        drawLabel("Amazing reel content with great caption...",
+                  at: refPt(20, 1700, in: inner), size: 13 * s,
+                  color: NSColor.white.withAlphaComponent(0.9))
+        drawIcon("music.note", at: refPt(30, 1770, in: inner), size: 12 * s)
+        drawLabel("Original audio - Page Name", at: refPt(50, 1760, in: inner),
+                  size: 12 * s, color: NSColor.white.withAlphaComponent(0.85))
     }
 
     // Grab zone: border region only; interior is click-through
