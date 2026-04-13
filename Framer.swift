@@ -716,55 +716,64 @@ class OverlayView: NSView {
         let s = scl(in: inner)
 
         drawTopGradient(height: 200, in: inner)
-        drawBottomGradient(height: 550, in: inner)
+        drawBottomGradient(height: 700, in: inner)
 
         // Top tabs
-        drawLabelCentered("Following", at: refPt(380, 60, in: inner), size: 16 * s,
+        drawLabelCentered("Following", at: refPt(350, 70, in: inner), size: 42 * s,
                          color: NSColor.white.withAlphaComponent(0.6))
-        drawLabelCentered("For You", at: refPt(540, 60, in: inner), size: 17 * s, weight: .bold)
-        let tabPt = refPt(490, 78, in: inner)
-        let tabEnd = NSPoint(x: tabPt.x + 100 * s, y: tabPt.y)
+        drawLabelCentered("For You", at: refPt(590, 70, in: inner), size: 44 * s, weight: .bold)
+        let tabPt = refPt(520, 100, in: inner)
+        let tabEnd = NSPoint(x: tabPt.x + 140 * s, y: tabPt.y)
         let tabLine = NSBezierPath()
         tabLine.move(to: tabPt); tabLine.line(to: tabEnd)
-        tabLine.lineWidth = 2 * s
+        tabLine.lineWidth = 3 * s
         NSColor.white.setStroke(); tabLine.stroke()
-        drawIcon("magnifyingglass", at: refPt(1020, 60, in: inner), size: 22 * s)
+        drawIcon("magnifyingglass", at: refPt(1000, 70, in: inner), size: 52 * s)
 
         // Right action bar
-        let ax: CGFloat = 1020
+        let ax: CGFloat = 980
 
-        // Profile circle + follow button
-        drawCircle(at: refPt(ax, 820, in: inner), radius: 24 * s,
+        // Profile circle (96px diameter)
+        drawCircle(at: refPt(ax, 730, in: inner), radius: 48 * s,
                    fill: NSColor.gray.withAlphaComponent(0.5), stroke: .white)
-        drawCircle(at: refPt(ax, 855, in: inner), radius: 10 * s,
+        drawCircle(at: refPt(ax, 790, in: inner), radius: 16 * s,
                    fill: .systemPink)
-        drawIcon("plus", at: refPt(ax, 855, in: inner), size: 8 * s)
+        drawIcon("plus", at: refPt(ax, 790, in: inner), size: 14 * s)
 
-        drawIcon("heart.fill", at: refPt(ax, 970, in: inner), size: 32 * s)
-        drawLabelCentered("328.7K", at: refPt(ax, 1020, in: inner), size: 11 * s, weight: .medium)
+        // Heart (~120-130px spacing between groups)
+        drawIcon("heart.fill", at: refPt(ax, 940, in: inner), size: 64 * s)
+        drawLabelCentered("633.0K", at: refPt(ax, 1000, in: inner), size: 26 * s, weight: .medium)
 
-        drawIcon("ellipsis.bubble.fill", at: refPt(ax, 1110, in: inner), size: 30 * s)
-        drawLabelCentered("2041", at: refPt(ax, 1160, in: inner), size: 11 * s, weight: .medium)
+        // Comment
+        drawIcon("ellipsis.bubble.fill", at: refPt(ax, 1120, in: inner), size: 60 * s)
+        drawLabelCentered("10 K", at: refPt(ax, 1180, in: inner), size: 26 * s, weight: .medium)
 
-        drawIcon("bookmark.fill", at: refPt(ax, 1250, in: inner), size: 28 * s)
-        drawLabelCentered("4032", at: refPt(ax, 1300, in: inner), size: 11 * s, weight: .medium)
+        // Bookmark
+        drawIcon("bookmark.fill", at: refPt(ax, 1300, in: inner), size: 56 * s)
+        drawLabelCentered("60.5K", at: refPt(ax, 1360, in: inner), size: 26 * s, weight: .medium)
 
-        drawIcon("arrowshape.turn.up.right.fill", at: refPt(ax, 1390, in: inner), size: 28 * s)
-        drawLabelCentered("Share", at: refPt(ax, 1440, in: inner), size: 11 * s, weight: .medium)
+        // Share
+        drawIcon("arrowshape.turn.up.right.fill", at: refPt(ax, 1470, in: inner), size: 56 * s)
+        drawLabelCentered("11.9 K", at: refPt(ax, 1530, in: inner), size: 26 * s, weight: .medium)
 
-        // Audio disc
-        drawCircle(at: refPt(ax, 1560, in: inner), radius: 22 * s,
+        // Audio disc (90px diameter)
+        drawCircle(at: refPt(ax, 1670, in: inner), radius: 44 * s,
                    fill: NSColor.darkGray, stroke: .gray)
-        drawIcon("music.note", at: refPt(ax, 1560, in: inner), size: 13 * s)
+        drawIcon("music.note", at: refPt(ax, 1670, in: inner), size: 26 * s)
 
         // Bottom info
-        drawLabel("@creator_name", at: refPt(20, 1570, in: inner), size: 15 * s, weight: .bold)
-        drawLabel("Check out this amazing content! #fyp #viral",
-                  at: refPt(20, 1620, in: inner), size: 13 * s,
+        drawLabel("USERNAME", at: refPt(30, 1600, in: inner), size: 44 * s, weight: .bold)
+        drawLabel("Description  #music  #dance",
+                  at: refPt(30, 1665, in: inner), size: 36 * s,
                   color: NSColor.white.withAlphaComponent(0.9))
-        drawIcon("music.note", at: refPt(30, 1700, in: inner), size: 12 * s)
-        drawLabel("Original Sound - creator_name", at: refPt(50, 1690, in: inner),
-                  size: 12 * s, color: NSColor.white.withAlphaComponent(0.85))
+        drawLabel("#foryou  #foryoupage",
+                  at: refPt(30, 1720, in: inner), size: 36 * s,
+                  color: NSColor.white.withAlphaComponent(0.9))
+        drawLabel("see translation", at: refPt(30, 1775, in: inner), size: 30 * s,
+                  weight: .semibold, color: NSColor.white.withAlphaComponent(0.7))
+        drawIcon("music.note", at: refPt(40, 1845, in: inner), size: 30 * s)
+        drawLabel("Original Sound", at: refPt(80, 1832, in: inner),
+                  size: 32 * s, color: NSColor.white.withAlphaComponent(0.85))
     }
 
     // MARK: - YT Shorts
