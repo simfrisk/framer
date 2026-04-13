@@ -573,16 +573,16 @@ class OverlayView: NSView {
                           fill: NSColor = NSColor.white.withAlphaComponent(0.15),
                           stroke: NSColor = NSColor.white.withAlphaComponent(0.5),
                           textColor: NSColor = .white) {
-        let font = NSFont.systemFont(ofSize: 13 * s, weight: .semibold)
+        let font = NSFont.systemFont(ofSize: 34 * s, weight: .semibold)
         let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: textColor]
         let str = NSAttributedString(string: text, attributes: attrs)
         let sz = str.size()
-        let pad: CGFloat = 10 * s
+        let pad: CGFloat = 20 * s
         let pillH = sz.height + pad
         let pillRect = NSRect(x: pt.x, y: pt.y - pillH, width: sz.width + pad * 2, height: pillH)
         let path = NSBezierPath(roundedRect: pillRect, xRadius: pillH / 2, yRadius: pillH / 2)
         fill.setFill(); path.fill()
-        stroke.setStroke(); path.lineWidth = s; path.stroke()
+        stroke.setStroke(); path.lineWidth = 2 * s; path.stroke()
         str.draw(at: NSPoint(x: pt.x + pad, y: pt.y - pillH + pad / 2))
     }
 
@@ -614,50 +614,50 @@ class OverlayView: NSView {
         let s = scl(in: inner)
 
         drawTopGradient(height: 250, in: inner)
-        drawBottomGradient(height: 550, in: inner)
+        drawBottomGradient(height: 650, in: inner)
 
         // Top bar
-        drawIcon("chevron.left", at: refPt(50, 55, in: inner), size: 22 * s)
-        drawLabelCentered("Reels", at: refPt(540, 55, in: inner), size: 20 * s, weight: .bold)
-        drawIcon("camera", at: refPt(1030, 55, in: inner), size: 24 * s)
+        drawIcon("chevron.left", at: refPt(60, 60, in: inner), size: 52 * s)
+        drawLabelCentered("Reels", at: refPt(540, 60, in: inner), size: 56 * s, weight: .bold)
+        drawIcon("camera", at: refPt(1000, 60, in: inner), size: 56 * s)
 
         // Right action bar
-        let ax: CGFloat = 1020
-        drawIcon("heart", at: refPt(ax, 1220, in: inner), size: 28 * s)
-        drawLabelCentered("5000", at: refPt(ax, 1270, in: inner), size: 12 * s, weight: .semibold)
+        let ax: CGFloat = 980
+        drawIcon("heart", at: refPt(ax, 1180, in: inner), size: 64 * s)
+        drawLabelCentered("5000", at: refPt(ax, 1240, in: inner), size: 30 * s, weight: .semibold)
 
-        drawIcon("bubble.right", at: refPt(ax, 1370, in: inner), size: 28 * s)
-        drawLabelCentered("6000", at: refPt(ax, 1420, in: inner), size: 12 * s, weight: .semibold)
+        drawIcon("bubble.right", at: refPt(ax, 1350, in: inner), size: 64 * s)
+        drawLabelCentered("6000", at: refPt(ax, 1410, in: inner), size: 30 * s, weight: .semibold)
 
-        drawIcon("paperplane", at: refPt(ax, 1520, in: inner), size: 28 * s)
-        drawLabelCentered("7000", at: refPt(ax, 1570, in: inner), size: 12 * s, weight: .semibold)
+        drawIcon("paperplane", at: refPt(ax, 1510, in: inner), size: 60 * s)
+        drawLabelCentered("7000", at: refPt(ax, 1570, in: inner), size: 30 * s, weight: .semibold)
 
-        drawIcon("ellipsis", at: refPt(ax, 1660, in: inner), size: 22 * s)
+        drawIcon("ellipsis", at: refPt(ax, 1660, in: inner), size: 52 * s)
 
         // Audio disc
-        drawCircle(at: refPt(ax, 1760, in: inner), radius: 18 * s,
+        drawCircle(at: refPt(ax, 1770, in: inner), radius: 44 * s,
                    fill: NSColor.gray.withAlphaComponent(0.5), stroke: .white)
-        drawIcon("music.note", at: refPt(ax, 1760, in: inner), size: 12 * s)
+        drawIcon("music.note", at: refPt(ax, 1770, in: inner), size: 26 * s)
 
         // Bottom info
-        let by: CGFloat = 1700
-        drawCircle(at: refPt(52, by + 15, in: inner), radius: 18 * s,
+        let by: CGFloat = 1520
+        drawCircle(at: refPt(60, by + 20, in: inner), radius: 48 * s,
                    fill: NSColor.gray.withAlphaComponent(0.6), stroke: .white)
-        drawLabel("your.name", at: refPt(82, by, in: inner), size: 14 * s, weight: .bold)
-        drawIcon("checkmark.seal.fill", at: refPt(215, by + 10, in: inner), size: 14 * s,
+        drawLabel("your.name", at: refPt(125, by, in: inner), size: 42 * s, weight: .bold)
+        drawIcon("checkmark.seal.fill", at: refPt(400, by + 15, in: inner), size: 36 * s,
                  color: .systemBlue)
-        drawPill("Follow", at: refPt(245, by - 2, in: inner), scale: s)
+        drawPill("Follow", at: refPt(450, by - 5, in: inner), scale: s)
 
         drawLabel("Lorem metus porttitor purus enim. Non et m...",
-                  at: refPt(20, by + 55, in: inner), size: 13 * s,
+                  at: refPt(30, by + 80, in: inner), size: 36 * s,
                   color: NSColor.white.withAlphaComponent(0.9))
 
-        drawIcon("music.note", at: refPt(30, by + 105, in: inner), size: 11 * s)
-        drawLabel("Lorem metus porttitor pur...", at: refPt(50, by + 95, in: inner),
-                  size: 11 * s, color: NSColor.white.withAlphaComponent(0.85))
-        drawIcon("person.2.fill", at: refPt(550, by + 105, in: inner), size: 11 * s)
-        drawLabel("55 users", at: refPt(575, by + 95, in: inner),
-                  size: 11 * s, color: NSColor.white.withAlphaComponent(0.85))
+        drawIcon("music.note", at: refPt(45, by + 150, in: inner), size: 30 * s)
+        drawLabel("Lorem metus porttitor pur...", at: refPt(85, by + 138, in: inner),
+                  size: 33 * s, color: NSColor.white.withAlphaComponent(0.85))
+        drawIcon("person.2.fill", at: refPt(640, by + 150, in: inner), size: 30 * s)
+        drawLabel("55 users", at: refPt(680, by + 138, in: inner),
+                  size: 33 * s, color: NSColor.white.withAlphaComponent(0.85))
     }
 
     // MARK: - IG Stories
@@ -665,11 +665,11 @@ class OverlayView: NSView {
     private func drawIGStories(in inner: NSRect) {
         let s = scl(in: inner)
 
-        drawTopGradient(height: 180, in: inner)
+        drawTopGradient(height: 250, in: inner)
         drawBottomGradient(height: 350, in: inner)
 
         // Progress bars
-        let barY: CGFloat = 18, barH: CGFloat = 3, barPad: CGFloat = 8
+        let barY: CGFloat = 105, barH: CGFloat = 6, barPad: CGFloat = 12
         let numBars = 3
         let totalPad = barPad * CGFloat(numBars + 1)
         let barW = (1080 - totalPad) / CGFloat(numBars)
@@ -684,30 +684,30 @@ class OverlayView: NSView {
         }
 
         // Profile + name
-        drawCircle(at: refPt(45, 72, in: inner), radius: 20 * s,
+        drawCircle(at: refPt(70, 175, in: inner), radius: 48 * s,
                    fill: NSColor.gray.withAlphaComponent(0.5),
                    stroke: NSColor.white.withAlphaComponent(0.8))
-        drawLabel("your.name", at: refPt(80, 58, in: inner), size: 14 * s, weight: .semibold)
-        drawLabel("2h", at: refPt(80, 82, in: inner), size: 12 * s,
+        drawLabel("your.name", at: refPt(135, 155, in: inner), size: 42 * s, weight: .semibold)
+        drawLabel("2h", at: refPt(135, 205, in: inner), size: 36 * s,
                   color: NSColor.white.withAlphaComponent(0.7))
 
-        drawIcon("xmark", at: refPt(1030, 72, in: inner), size: 22 * s)
-        drawIcon("ellipsis", at: refPt(960, 72, in: inner), size: 20 * s)
+        drawIcon("xmark", at: refPt(1010, 175, in: inner), size: 52 * s)
+        drawIcon("ellipsis", at: refPt(920, 175, in: inner), size: 48 * s)
 
         // Bottom: Send message bar
-        let msgY: CGFloat = 1800
-        let msgPt = refPt(20, msgY, in: inner)
-        let msgBtm = refPt(20, msgY + 50, in: inner)
-        let msgRect = NSRect(x: msgPt.x, y: msgBtm.y, width: 800 * s, height: 48 * s)
-        let msgPath = NSBezierPath(roundedRect: msgRect, xRadius: 24 * s, yRadius: 24 * s)
+        let msgY: CGFloat = 1740
+        let msgPt = refPt(30, msgY, in: inner)
+        let msgBtm = refPt(30, msgY + 80, in: inner)
+        let msgRect = NSRect(x: msgPt.x, y: msgBtm.y, width: 760 * s, height: 80 * s)
+        let msgPath = NSBezierPath(roundedRect: msgRect, xRadius: 40 * s, yRadius: 40 * s)
         NSColor.white.withAlphaComponent(0.15).setFill(); msgPath.fill()
-        NSColor.white.withAlphaComponent(0.4).setStroke(); msgPath.lineWidth = s; msgPath.stroke()
+        NSColor.white.withAlphaComponent(0.4).setStroke(); msgPath.lineWidth = 2 * s; msgPath.stroke()
         drawLabel("Send message",
-                  at: NSPoint(x: msgRect.minX + 20 * s, y: msgRect.midY + 7 * s),
-                  size: 14 * s, color: NSColor.white.withAlphaComponent(0.6))
+                  at: NSPoint(x: msgRect.minX + 30 * s, y: msgRect.midY + 10 * s),
+                  size: 36 * s, color: NSColor.white.withAlphaComponent(0.6))
 
-        drawIcon("heart", at: refPt(920, msgY + 25, in: inner), size: 26 * s)
-        drawIcon("paperplane", at: refPt(1010, msgY + 25, in: inner), size: 26 * s)
+        drawIcon("heart", at: refPt(890, msgY + 40, in: inner), size: 56 * s)
+        drawIcon("paperplane", at: refPt(1000, msgY + 40, in: inner), size: 56 * s)
     }
 
     // MARK: - TikTok
@@ -781,48 +781,53 @@ class OverlayView: NSView {
     private func drawYTShorts(in inner: NSRect) {
         let s = scl(in: inner)
 
-        drawTopGradient(height: 160, in: inner)
-        drawBottomGradient(height: 450, in: inner)
+        drawTopGradient(height: 180, in: inner)
+        drawBottomGradient(height: 550, in: inner)
 
         // Top bar
-        drawIcon("magnifyingglass", at: refPt(940, 60, in: inner), size: 22 * s)
-        drawIcon("ellipsis", at: refPt(1030, 60, in: inner), size: 22 * s)
+        drawIcon("magnifyingglass", at: refPt(900, 65, in: inner), size: 52 * s)
+        drawIcon("ellipsis", at: refPt(1010, 65, in: inner), size: 52 * s)
 
         // Right action bar
-        let ax: CGFloat = 1020
+        let ax: CGFloat = 980
 
-        drawIcon("hand.thumbsup", at: refPt(ax, 1050, in: inner), size: 28 * s)
-        drawLabelCentered("45K", at: refPt(ax, 1100, in: inner), size: 11 * s, weight: .medium)
+        // Like
+        drawIcon("hand.thumbsup", at: refPt(ax, 770, in: inner), size: 60 * s)
+        drawLabelCentered("45K", at: refPt(ax, 830, in: inner), size: 28 * s, weight: .medium)
 
-        drawIcon("hand.thumbsdown", at: refPt(ax, 1190, in: inner), size: 28 * s)
-        drawLabelCentered("Dislike", at: refPt(ax, 1240, in: inner), size: 10 * s, weight: .medium)
+        // Dislike
+        drawIcon("hand.thumbsdown", at: refPt(ax, 930, in: inner), size: 60 * s)
+        drawLabelCentered("Dislike", at: refPt(ax, 990, in: inner), size: 26 * s, weight: .medium)
 
-        drawIcon("text.bubble", at: refPt(ax, 1330, in: inner), size: 26 * s)
-        drawLabelCentered("1.2K", at: refPt(ax, 1380, in: inner), size: 11 * s, weight: .medium)
+        // Comments
+        drawIcon("text.bubble", at: refPt(ax, 1090, in: inner), size: 56 * s)
+        drawLabelCentered("1.2K", at: refPt(ax, 1150, in: inner), size: 28 * s, weight: .medium)
 
-        drawIcon("arrowshape.turn.up.right", at: refPt(ax, 1470, in: inner), size: 26 * s)
-        drawLabelCentered("Share", at: refPt(ax, 1520, in: inner), size: 10 * s, weight: .medium)
+        // Share
+        drawIcon("arrowshape.turn.up.right", at: refPt(ax, 1250, in: inner), size: 56 * s)
+        drawLabelCentered("Share", at: refPt(ax, 1310, in: inner), size: 26 * s, weight: .medium)
 
-        drawIcon("arrow.2.squarepath", at: refPt(ax, 1600, in: inner), size: 24 * s)
-        drawLabelCentered("Remix", at: refPt(ax, 1650, in: inner), size: 10 * s, weight: .medium)
+        // Remix
+        drawIcon("arrow.2.squarepath", at: refPt(ax, 1400, in: inner), size: 52 * s)
+        drawLabelCentered("Remix", at: refPt(ax, 1460, in: inner), size: 26 * s, weight: .medium)
 
-        // Audio disc
-        drawCircle(at: refPt(ax, 1750, in: inner), radius: 18 * s,
+        // Audio disc (larger on YT Shorts ~120px)
+        drawCircle(at: refPt(ax, 1580, in: inner), radius: 52 * s,
                    fill: NSColor.darkGray, stroke: .gray)
-        drawIcon("music.note", at: refPt(ax, 1750, in: inner), size: 12 * s)
+        drawIcon("music.note", at: refPt(ax, 1580, in: inner), size: 26 * s)
 
         // Bottom: channel + subscribe
-        drawCircle(at: refPt(45, 1650, in: inner), radius: 20 * s,
+        drawCircle(at: refPt(70, 1630, in: inner), radius: 48 * s,
                    fill: NSColor.gray.withAlphaComponent(0.5), stroke: .white)
-        drawLabel("@channel_name", at: refPt(80, 1638, in: inner), size: 14 * s, weight: .semibold)
-        drawPill("Subscribe", at: refPt(300, 1636, in: inner), scale: s,
+        drawLabel("@channel_name", at: refPt(135, 1615, in: inner), size: 42 * s, weight: .semibold)
+        drawPill("Subscribe", at: refPt(440, 1612, in: inner), scale: s,
                  fill: .red, stroke: .red)
 
         drawLabel("Amazing video title goes here #shorts",
-                  at: refPt(20, 1700, in: inner), size: 13 * s,
+                  at: refPt(30, 1700, in: inner), size: 36 * s,
                   color: NSColor.white.withAlphaComponent(0.9))
-        drawIcon("music.note", at: refPt(30, 1765, in: inner), size: 12 * s)
-        drawLabel("Original audio", at: refPt(50, 1755, in: inner), size: 12 * s,
+        drawIcon("music.note", at: refPt(45, 1775, in: inner), size: 30 * s)
+        drawLabel("Original audio", at: refPt(85, 1762, in: inner), size: 33 * s,
                   color: NSColor.white.withAlphaComponent(0.85))
     }
 
@@ -832,32 +837,36 @@ class OverlayView: NSView {
         let refW: CGFloat = 1920, refH: CGFloat = 1080
         let s = inner.width / refW
 
-        drawBottomGradient(height: 120, refH: refH, in: inner)
+        drawBottomGradient(height: 150, refH: refH, in: inner)
 
         // Progress bar
-        let barPt = refPt(0, 980, refW: refW, refH: refH, in: inner)
-        let barRect = NSRect(x: inner.minX, y: barPt.y, width: inner.width, height: 4 * s)
+        let barPt = refPt(24, 960, refW: refW, refH: refH, in: inner)
+        let barW = inner.width - 48 * s
+        let barRect = NSRect(x: barPt.x, y: barPt.y, width: barW, height: 8 * s)
         NSColor.white.withAlphaComponent(0.3).setFill()
-        NSBezierPath(rect: barRect).fill()
-        let playedRect = NSRect(x: inner.minX, y: barPt.y, width: inner.width * 0.4, height: 4 * s)
+        let barPath = NSBezierPath(roundedRect: barRect, xRadius: 4 * s, yRadius: 4 * s)
+        barPath.fill()
+        // Played portion (40%)
+        let playedRect = NSRect(x: barPt.x, y: barPt.y, width: barW * 0.4, height: 8 * s)
         NSColor.red.setFill()
-        NSBezierPath(rect: playedRect).fill()
-        drawCircle(at: NSPoint(x: inner.minX + inner.width * 0.4, y: barPt.y + 2 * s),
-                   radius: 7 * s, fill: .red)
+        NSBezierPath(roundedRect: playedRect, xRadius: 4 * s, yRadius: 4 * s).fill()
+        // Scrubber dot
+        drawCircle(at: NSPoint(x: barPt.x + barW * 0.4, y: barPt.y + 4 * s),
+                   radius: 14 * s, fill: .red)
 
         // Controls row
-        let cy: CGFloat = 1035
-        drawIcon("play.fill", at: refPt(60, cy, refW: refW, refH: refH, in: inner), size: 22 * s)
-        drawIcon("forward.end.fill", at: refPt(140, cy, refW: refW, refH: refH, in: inner), size: 18 * s)
-        drawIcon("speaker.wave.2.fill", at: refPt(220, cy, refW: refW, refH: refH, in: inner), size: 18 * s)
-        drawLabel("3:42 / 8:15", at: refPt(300, cy - 12, refW: refW, refH: refH, in: inner),
-                  size: 13 * s, color: NSColor.white.withAlphaComponent(0.9))
+        let cy: CGFloat = 1020
+        drawIcon("play.fill", at: refPt(70, cy, refW: refW, refH: refH, in: inner), size: 48 * s)
+        drawIcon("forward.end.fill", at: refPt(170, cy, refW: refW, refH: refH, in: inner), size: 40 * s)
+        drawIcon("speaker.wave.2.fill", at: refPt(280, cy, refW: refW, refH: refH, in: inner), size: 40 * s)
+        drawLabel("3:42 / 8:15", at: refPt(380, cy - 15, refW: refW, refH: refH, in: inner),
+                  size: 36 * s, color: NSColor.white.withAlphaComponent(0.9))
 
-        drawIcon("captions.bubble", at: refPt(1660, cy, refW: refW, refH: refH, in: inner), size: 20 * s)
-        drawIcon("gear", at: refPt(1740, cy, refW: refW, refH: refH, in: inner), size: 20 * s)
-        drawIcon("rectangle.on.rectangle", at: refPt(1800, cy, refW: refW, refH: refH, in: inner), size: 18 * s)
+        drawIcon("captions.bubble", at: refPt(1580, cy, refW: refW, refH: refH, in: inner), size: 42 * s)
+        drawIcon("gear", at: refPt(1680, cy, refW: refW, refH: refH, in: inner), size: 42 * s)
+        drawIcon("rectangle.on.rectangle", at: refPt(1780, cy, refW: refW, refH: refH, in: inner), size: 40 * s)
         drawIcon("arrow.up.left.and.arrow.down.right",
-                 at: refPt(1870, cy, refW: refW, refH: refH, in: inner), size: 20 * s)
+                 at: refPt(1870, cy, refW: refW, refH: refH, in: inner), size: 42 * s)
     }
 
     // MARK: - FB Reels
@@ -866,38 +875,38 @@ class OverlayView: NSView {
         let s = scl(in: inner)
 
         drawTopGradient(height: 250, in: inner)
-        drawBottomGradient(height: 500, in: inner)
+        drawBottomGradient(height: 600, in: inner)
 
         // Top bar
-        drawLabel("Reels", at: refPt(20, 45, in: inner), size: 22 * s, weight: .bold)
-        drawIcon("camera", at: refPt(1030, 60, in: inner), size: 24 * s)
+        drawLabel("Reels", at: refPt(30, 50, in: inner), size: 54 * s, weight: .bold)
+        drawIcon("camera", at: refPt(1000, 65, in: inner), size: 56 * s)
 
         // Right action bar
-        let ax: CGFloat = 1020
+        let ax: CGFloat = 980
 
-        drawIcon("hand.thumbsup", at: refPt(ax, 1200, in: inner), size: 28 * s)
-        drawLabelCentered("12K", at: refPt(ax, 1250, in: inner), size: 12 * s, weight: .semibold)
+        drawIcon("hand.thumbsup", at: refPt(ax, 1100, in: inner), size: 60 * s)
+        drawLabelCentered("12K", at: refPt(ax, 1160, in: inner), size: 28 * s, weight: .semibold)
 
-        drawIcon("bubble.right", at: refPt(ax, 1350, in: inner), size: 28 * s)
-        drawLabelCentered("847", at: refPt(ax, 1400, in: inner), size: 12 * s, weight: .semibold)
+        drawIcon("bubble.right", at: refPt(ax, 1280, in: inner), size: 60 * s)
+        drawLabelCentered("847", at: refPt(ax, 1340, in: inner), size: 28 * s, weight: .semibold)
 
-        drawIcon("arrowshape.turn.up.right.fill", at: refPt(ax, 1500, in: inner), size: 28 * s)
-        drawLabelCentered("2.3K", at: refPt(ax, 1550, in: inner), size: 12 * s, weight: .semibold)
+        drawIcon("arrowshape.turn.up.right.fill", at: refPt(ax, 1460, in: inner), size: 60 * s)
+        drawLabelCentered("2.3K", at: refPt(ax, 1520, in: inner), size: 28 * s, weight: .semibold)
 
-        drawIcon("ellipsis", at: refPt(ax, 1640, in: inner), size: 22 * s)
+        drawIcon("ellipsis", at: refPt(ax, 1620, in: inner), size: 52 * s)
 
         // Bottom: profile + follow
-        drawCircle(at: refPt(45, 1650, in: inner), radius: 20 * s,
+        drawCircle(at: refPt(65, 1590, in: inner), radius: 48 * s,
                    fill: NSColor.gray.withAlphaComponent(0.5), stroke: .white)
-        drawLabel("Page Name", at: refPt(80, 1636, in: inner), size: 14 * s, weight: .bold)
-        drawPill("Follow", at: refPt(250, 1636, in: inner), scale: s)
+        drawLabel("Page Name", at: refPt(130, 1575, in: inner), size: 42 * s, weight: .bold)
+        drawPill("Follow", at: refPt(380, 1572, in: inner), scale: s)
 
         drawLabel("Amazing reel content with great caption...",
-                  at: refPt(20, 1700, in: inner), size: 13 * s,
+                  at: refPt(30, 1660, in: inner), size: 36 * s,
                   color: NSColor.white.withAlphaComponent(0.9))
-        drawIcon("music.note", at: refPt(30, 1770, in: inner), size: 12 * s)
-        drawLabel("Original audio - Page Name", at: refPt(50, 1760, in: inner),
-                  size: 12 * s, color: NSColor.white.withAlphaComponent(0.85))
+        drawIcon("music.note", at: refPt(45, 1740, in: inner), size: 30 * s)
+        drawLabel("Original audio - Page Name", at: refPt(85, 1728, in: inner),
+                  size: 33 * s, color: NSColor.white.withAlphaComponent(0.85))
     }
 
     // Grab zone: border region only; interior is click-through
